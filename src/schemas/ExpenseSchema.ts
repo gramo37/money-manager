@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IExpense extends Document {
+export interface IExpense extends Document {
   userId: mongoose.Schema.Types.ObjectId;
   categoryId: mongoose.Schema.Types.ObjectId;
   amount: number;

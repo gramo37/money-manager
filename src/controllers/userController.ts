@@ -9,8 +9,6 @@ import UserModel from "../schemas/UserSchema";
 import { catchAsync } from "../utils/errorHandler";
 import { getToken } from "../utils";
 
-const SECRET = process.env.SECRET_KEY ?? "SECRET_KEY";
-
 export const createUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { error } = registerValidationSchema.validate(req.body);

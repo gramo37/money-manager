@@ -4,6 +4,8 @@ import connectTodb from "./db";
 import dotenv from "dotenv";
 import userRouter from "./routes/userRoutes";
 import { globalErrorHandler } from "./utils/errorHandler";
+import expenseRouter from "./routes/expenseRoutes";
+import { isAuthenticated } from "./middleware/isAuthenticated";
 
 dotenv.config();
 
@@ -18,6 +20,7 @@ connectTodb(process.env.MONGO_URI);
 
 // Define a simple route
 app.use("/users", userRouter);
+app.use("/expenses", isAuthenticated, expenseRouter)
 
 // Global Error Handling
 app.use(globalErrorHandler);
