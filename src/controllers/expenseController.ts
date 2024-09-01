@@ -109,18 +109,12 @@ export const createExpense = catchAsync(
     if (error) return next(new AppError(error.details[0].message, 400));
 
     const { category, amount, date, description } = req.body;
-    let db_category: any = await CategoryModel.findOne({ name: category.name });
-    if (!db_category) {
-      try {
-        db_category = await CategoryModel.create({
-          name: category.name,
-          description: category.description ?? "",
-        });
-      } catch (error) {
-        console.log(error);
-        next(new AppError("Something went wrong in creating category", 500));
-      }
-    }
+
+    const db_category = await CategoryModel.findOneAndUpdate(
+      { name: category.name },
+      { $setOnInsert: { name: category.name } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
 
     const expense = new ExpenseModel({
       userId: req.user._id,

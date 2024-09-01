@@ -22,7 +22,6 @@ export function addDaysToDate(date: Date, days: number): Date {
 }
 
 export function addMonthsToDate(date: Date, months: number): Date {
-  console.log(addMonths(date, months), date, months, "fcewfew");
   return addMonths(date, months);
 }
 
