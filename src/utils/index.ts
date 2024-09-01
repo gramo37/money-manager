@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { addDays, addMonths, addYears } from "date-fns";
 
 dotenv.config();
 
@@ -14,4 +15,17 @@ export function getToken(name: string, email: string) {
     { expiresIn: "1h" }
   );
   return token;
+}
+
+export function addDaysToDate(date: Date, days: number): Date {
+  return addDays(date, days);
+}
+
+export function addMonthsToDate(date: Date, months: number): Date {
+  console.log(addMonths(date, months), date, months, "fcewfew");
+  return addMonths(date, months);
+}
+
+export function addYearsToDate(date: Date, years: number): Date {
+  return addYears(date, years);
 }

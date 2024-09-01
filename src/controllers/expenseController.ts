@@ -1,21 +1,103 @@
 import { Response, NextFunction } from "express";
 import { AppError, catchAsync } from "../utils/errorHandler";
 import { authenticatedUserRequest } from "../middleware/isAuthenticated";
-import ExpenseModel, { IExpense } from "../schemas/ExpenseSchema";
+import ExpenseModel from "../schemas/ExpenseSchema";
 import CategoryModel from "../schemas/CategorySchema";
 import {
   createExpenseValidationSchema,
   updateExpenseValidationSchema,
+  getAllExpenseValidationSchema,
 } from "../validation/expenseValidation";
 import ExpenseSchema from "../schemas/ExpenseSchema";
+import { addDaysToDate, addMonthsToDate, addYearsToDate } from "../utils";
 
 export const getAllExpenses = catchAsync(
   async (req: authenticatedUserRequest, res: Response, next: NextFunction) => {
-    const expenses = await ExpenseModel.find({ userId: req.user._id });
+    const { error } = getAllExpenseValidationSchema.validate(req.body);
+    if (error) return next(new AppError(error.details[0].message, 400));
+
+    let { skip, limit, time_period, starting_date, quantity } = req.body;
+
+    if (!skip) skip = 0;
+    if (!limit) limit = 100;
+    if (!time_period) time_period = "month";
+    if (!quantity) quantity = 1;
+
+    const startDate = starting_date ? new Date(starting_date) : new Date();
+    let endDate: Date;
+
+    switch (time_period) {
+      case "day":
+        endDate = addDaysToDate(startDate, quantity);
+        break;
+      case "year":
+        endDate = addYearsToDate(startDate, quantity);
+        break;
+      default:
+        endDate = addMonthsToDate(startDate, quantity);
+    }
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.log(startDate, endDate);
+      return next(new AppError("startDate or endDate wrong", 500));
+    }
+
+    const analysis = await ExpenseModel.aggregate([
+      // Step 1: Match expenses for the given user and date range
+      {
+        $match: {
+          userId: req.user._id,
+          date: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
+      },
+      // Step 2: Lookup category details
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      // Step 3: Unwind the categoryDetails array (since $lookup returns an array)
+      {
+        $unwind: "$categoryDetails",
+      },
+      // Step 4: Group by category and calculate total amount
+      {
+        $group: {
+          _id: "$categoryDetails._id",
+          categoryName: { $first: "$categoryDetails.name" },
+          totalAmountSpent: { $sum: "$amount" },
+        },
+      },
+      // Step 5: Project the final output
+      {
+        $project: {
+          _id: 0,
+          categoryId: "$_id",
+          categoryName: 1,
+          totalAmountSpent: 1,
+        },
+      },
+    ]);
+
+    const expenses = await ExpenseModel.find({
+      userId: req.user._id,
+      date: { $lte: endDate, $gte: startDate },
+    })
+      .skip(skip)
+      .limit(limit)
+      .sort({ date: -1 });
+
     res.status(201).json({
       status: "success",
       data: {
         expenses,
+        analysis,
       },
     });
   }
